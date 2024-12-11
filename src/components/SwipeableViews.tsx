@@ -1,115 +1,77 @@
 'use client';
 
 import { motion, PanInfo, useAnimation } from 'framer-motion';
-import { useState, useEffect, Children, useRef, useMemo } from 'react';
+import { useState, useEffect, Children } from 'react';
 
 const PAGE_NAMES = ['Journal', 'Chat', 'Resources'];
 
 export default function SwipeableViews({ children }: { children: React.ReactNode }) {
   const [currentIndex, setCurrentIndex] = useState(1);
+  const [dragStart, setDragStart] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(0);
   const controls = useAnimation();
-  const containerRef = useRef<HTMLDivElement>(null);
-  
-  // Memoize children array to prevent unnecessary re-renders
-  const childrenArray = useMemo(() => Children.toArray(children), [children]);
 
-  // Calculate window width safely
-  const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 375;
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    // Set initial width
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-  const handleDragEnd = (
-    _: MouseEvent | TouchEvent | PointerEvent, 
-    { offset, velocity }: PanInfo
-  ) => {
-    const swipe = offset.x;
-    const swipeVelocity = velocity.x;
-
-    // Determine swipe direction and magnitude
-    const isSwipingLeft = swipe < 0;
-    const isSwipingRight = swipe > 0;
-    const swipeThreshold = windowWidth * 0.2;
-    const velocityThreshold = 300; // pixels per second
-
-    // Decide whether to change page based on swipe distance and velocity
-    const shouldChangePage = 
-      Math.abs(swipe) > swipeThreshold || 
-      Math.abs(swipeVelocity) > velocityThreshold;
-
-    if (shouldChangePage) {
-      if (isSwipingLeft && currentIndex < childrenArray.length - 1) {
-        // Swipe left to next page
-        setCurrentIndex(prev => prev + 1);
-      } else if (isSwipingRight && currentIndex > 0) {
-        // Swipe right to previous page
-        setCurrentIndex(prev => prev - 1);
-      }
-    }
-
-    // Animate back to the current page
-    controls.start({ 
-      x: -currentIndex * 100 + '%',
-      transition: { 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 30 
-      }
-    });
+  const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    setDragStart(info.point.x);
   };
 
-  // Update page position whenever currentIndex changes
-  useEffect(() => {
-    controls.start({ 
-      x: -currentIndex * 100 + '%',
-      transition: { 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 30 
+  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const diff = dragStart - info.point.x;
+    const threshold = windowWidth * 0.15;
+
+    // Use React.Children.toArray for type-safe array conversion
+    const childrenArray = Children.toArray(children);
+    
+    if (childrenArray.length > 0) {
+      if (Math.abs(diff) > threshold) {
+        if (diff > 0 && currentIndex < childrenArray.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else if (diff < 0 && currentIndex > 0) {
+          setCurrentIndex(currentIndex - 1);
+        }
       }
-    });
+    }
+    controls.start({ x: -currentIndex * 100 + '%' });
+  };
+
+  useEffect(() => {
+    controls.start({ x: -currentIndex * 100 + '%' });
   }, [currentIndex, controls]);
 
   return (
-    <div 
-      ref={containerRef}
-      className="fixed inset-0 overflow-hidden bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800"
-      style={{ 
-        userSelect: 'none',
-        WebkitUserSelect: 'none',
-        touchAction: 'none'
-      }}
-    >
+    <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
       {/* Content */}
       <div className="relative h-full pb-24">
         <motion.div
-          className="flex h-full"
-          style={{ 
-            x: -currentIndex * 100 + '%',
-            touchAction: 'none'
-          }}
+          className="flex h-full touch-pan-y"
+          style={{ x: -currentIndex * 100 + '%' }}
           drag="x"
-          dragConstraints={{ 
-            left: -(childrenArray.length - 1) * windowWidth, 
-            right: 0 
-          }}
-          dragElastic={0.1}
-          dragMomentum={false}
+          dragConstraints={{ left: -((Children.count(children) || 0) - 1) * windowWidth, right: 0 }}
+          dragElastic={0.2}
+          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           animate={controls}
-          transition={{ 
-            type: "spring", 
-            stiffness: 300, 
-            damping: 30,
-            mass: 0.8
-          }}
+          transition={{ type: "spring", stiffness: 400, damping: 40 }}
         >
           {Children.map(children, (child, index) => (
             <div
               key={index}
               className="w-screen h-full flex-shrink-0 overflow-hidden"
-              style={{ 
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                touchAction: 'none'
-              }}
             >
               {child}
             </div>
