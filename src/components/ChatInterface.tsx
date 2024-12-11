@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { RefreshCw, Send } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -21,6 +22,12 @@ export default function ChatInterface() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleRefreshChat = () => {
+    setMessages([]);
+    setInput('');
+    setIsTyping(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,10 +77,10 @@ export default function ChatInterface() {
   };
 
   return (
-    <div className="w-full h-full flex flex-col px-4 py-6">
-      <div className="w-full max-w-4xl mx-auto flex-grow flex flex-col">
+    <div className="w-full h-full flex flex-col px-2 py-6">
+      <div className="w-full max-w-5xl mx-auto flex-grow flex flex-col">
         <div className="flex-grow relative bg-transparent rounded-2xl overflow-hidden shadow-lg">
-          <div className={`absolute inset-0 ${messages.length > 0 ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-400/20 hover:scrollbar-thumb-neutral-400/30 scrollbar-track-transparent' : 'overflow-hidden'} p-4 sm:p-6 space-y-4`}>
+          <div className={`absolute inset-0 ${messages.length > 0 ? 'overflow-y-auto scrollbar-thin scrollbar-thumb-neutral-400/20 hover:scrollbar-thumb-neutral-400/30 scrollbar-track-transparent' : 'overflow-hidden'} p-3 sm:p-4 space-y-4`}>
             {messages.length === 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -174,27 +181,38 @@ export default function ChatInterface() {
 
         <div className="mt-4 w-full -mb-4">
           <form onSubmit={handleSubmit} className="relative">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl bg-white/50 dark:bg-black/20 backdrop-blur-sm border border-neutral-200 dark:border-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600"
-              placeholder="Type your message..."
-            />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-400"
-              disabled={!input.trim()}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-5 h-5"
+            <div className="flex items-center space-x-2">
+              <button 
+                type="button"
+                onClick={handleRefreshChat}
+                className="p-2 rounded-full hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors duration-200 group relative"
+                aria-label="Refresh Chat"
               >
-                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-              </svg>
-            </button>
+                <div className="absolute inset-0 rounded-full bg-neutral-100/50 dark:bg-neutral-900/50 scale-0 group-hover:scale-100 transition-transform duration-200" />
+                <RefreshCw className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
+              </button>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl bg-white/50 dark:bg-black/20 backdrop-blur-sm border border-neutral-200 dark:border-neutral-800 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600"
+                placeholder="Type your message..."
+              />
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-blue-600 dark:text-blue-500 hover:text-blue-700 dark:hover:text-blue-400"
+                disabled={!input.trim()}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                </svg>
+              </button>
+            </div>
           </form>
         </div>
       </div>

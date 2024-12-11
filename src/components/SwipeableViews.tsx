@@ -1,16 +1,11 @@
 'use client';
 
 import { motion, PanInfo, useAnimation } from 'framer-motion';
-import { useState, useEffect } from 'react';
-import styles from './BackgroundEffect.module.css';
-
-interface SwipeableViewsProps {
-  children: React.ReactNode[];
-}
+import { useState, useEffect, Children } from 'react';
 
 const PAGE_NAMES = ['Journal', 'Chat', 'Resources'];
 
-export default function SwipeableViews({ children }: SwipeableViewsProps) {
+export default function SwipeableViews({ children }: { children: React.ReactNode }) {
   const [currentIndex, setCurrentIndex] = useState(1);
   const [dragStart, setDragStart] = useState(0);
   const [windowWidth, setWindowWidth] = useState(0);
@@ -39,11 +34,16 @@ export default function SwipeableViews({ children }: SwipeableViewsProps) {
     const diff = dragStart - info.point.x;
     const threshold = windowWidth * 0.15;
 
-    if (Math.abs(diff) > threshold) {
-      if (diff > 0 && currentIndex < children.length - 1) {
-        setCurrentIndex(currentIndex + 1);
-      } else if (diff < 0 && currentIndex > 0) {
-        setCurrentIndex(currentIndex - 1);
+    // Use React.Children.toArray for type-safe array conversion
+    const childrenArray = Children.toArray(children);
+    
+    if (childrenArray.length > 0) {
+      if (Math.abs(diff) > threshold) {
+        if (diff > 0 && currentIndex < childrenArray.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else if (diff < 0 && currentIndex > 0) {
+          setCurrentIndex(currentIndex - 1);
+        }
       }
     }
     controls.start({ x: -currentIndex * 100 + '%' });
@@ -55,27 +55,20 @@ export default function SwipeableViews({ children }: SwipeableViewsProps) {
 
   return (
     <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
-      {/* Background Effect */}
-      <div className={styles.backgroundEffect}>
-        <div className={styles.blob1} />
-        <div className={styles.blob2} />
-        <div className={styles.blob3} />
-      </div>
-
       {/* Content */}
       <div className="relative h-full pb-24">
         <motion.div
           className="flex h-full touch-pan-y"
           style={{ x: -currentIndex * 100 + '%' }}
           drag="x"
-          dragConstraints={{ left: -((children.length - 1) * windowWidth), right: 0 }}
+          dragConstraints={{ left: -((Children.count(children) || 0) - 1) * windowWidth, right: 0 }}
           dragElastic={0.2}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           animate={controls}
           transition={{ type: "spring", stiffness: 400, damping: 40 }}
         >
-          {children.map((child, index) => (
+          {Children.map(children, (child, index) => (
             <div
               key={index}
               className="w-screen h-full flex-shrink-0 overflow-hidden"

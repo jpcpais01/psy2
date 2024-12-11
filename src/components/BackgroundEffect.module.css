@@ -1,37 +1,101 @@
-@keyframes backgroundBlobAnimation {
+@keyframes aurora {
   0%, 100% {
-    transform: translate(0, 0) scale(0.7);
-    opacity: 0.05;
+    transform: translate3d(0, 0, 0) scale(1.2);
+  }
+  25% {
+    transform: translate3d(5%, -5%, 0) scale(1.1);
   }
   50% {
-    transform: translate(150px, 150px) scale(1.3);
-    opacity: 0.15;
+    transform: translate3d(0, -8%, 0) scale(1);
+  }
+  75% {
+    transform: translate3d(-5%, -3%, 0) scale(1.3);
   }
 }
 
-@keyframes backgroundOpacityAnimation {
-  0%, 100% { opacity: 0.05; }
-  50% { opacity: 0.15; }
+@keyframes colorFlow {
+  0%, 100% {
+    filter: hue-rotate(0deg) brightness(0.8);
+  }
+  33% {
+    filter: hue-rotate(45deg) brightness(0.9);
+  }
+  66% {
+    filter: hue-rotate(-45deg) brightness(0.7);
+  }
 }
 
 .backgroundEffect {
   position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  pointer-events: none;
+  z-index: -50;
+  overflow: hidden;
+  background: rgb(10, 12, 16);
+}
+
+.backgroundEffect::before,
+.backgroundEffect::after {
+  content: '';
+  position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: radial-gradient(
-    circle at 30% 50%, 
-    rgba(96, 165, 250, 0.2) 0%, 
-    rgba(192, 132, 252, 0.15) 50%, 
-    transparent 70%
-  );
-  background-size: 400% 400%;
+  mix-blend-mode: color-dodge;
+  animation: aurora 20s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+.backgroundEffect::before {
+  background: 
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(88, 28, 135, 0.15) 0%,
+      rgba(67, 56, 202, 0.15) 25%,
+      rgba(59, 130, 246, 0.15) 50%,
+      rgba(37, 99, 235, 0.15) 75%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle at 20% 50%,
+      rgba(55, 48, 163, 0.2) 0%,
+      rgba(29, 78, 216, 0.2) 50%,
+      transparent 100%
+    );
   filter: blur(60px);
   animation: 
-    backgroundBlobAnimation 15s ease-in-out infinite,
-    backgroundOpacityAnimation 7s ease-in-out infinite;
-  pointer-events: none;
-  z-index: -50;
-  overflow: hidden;
+    aurora 25s ease-in-out infinite,
+    colorFlow 30s ease-in-out infinite;
+}
+
+.backgroundEffect::after {
+  background: 
+    radial-gradient(
+      circle at 80% 100%,
+      rgba(67, 56, 202, 0.15) 0%,
+      rgba(88, 28, 135, 0.15) 25%,
+      rgba(124, 58, 237, 0.15) 50%,
+      rgba(139, 92, 246, 0.15) 75%,
+      transparent 100%
+    ),
+    radial-gradient(
+      circle at 70% 50%,
+      rgba(76, 29, 149, 0.2) 0%,
+      rgba(109, 40, 217, 0.2) 50%,
+      transparent 100%
+    );
+  filter: blur(80px);
+  animation: 
+    aurora 30s ease-in-out infinite reverse,
+    colorFlow 35s ease-in-out infinite reverse;
+  opacity: 0.6;
+}
+
+/* Add depth to the dark background */
+.backgroundEffect::before {
+  background-blend-mode: color-dodge;
 }
