@@ -27,10 +27,21 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
   }, []);
 
   const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    console.log('Drag Start:', {
+      eventType: _.type,
+      pointX: info.point.x,
+      touchCount: _.type === 'touchstart' ? ((_ as TouchEvent).touches.length) : 1
+    });
     setDragStart(info.point.x);
   };
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    console.log('Drag End:', {
+      eventType: _.type,
+      pointX: info.point.x,
+      touchCount: _.type === 'touchend' ? ((_ as TouchEvent).touches.length) : 1
+    });
+
     const diff = dragStart - info.point.x;
     const threshold = windowWidth * 0.15;
 
@@ -68,13 +79,31 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
           onDragEnd={handleDragEnd}
           animate={controls}
           transition={{ type: "spring", stiffness: 400, damping: 40 }}
+          // Add explicit touch event handlers
           onTouchStart={(e) => {
-            // Prevent default touch behavior
-            e.preventDefault();
+            // Only allow single-finger touch
+            if (e.touches.length === 1) {
+              e.preventDefault();
+              console.log('Single finger touch started');
+            } else {
+              console.log('Multiple fingers detected, ignoring touch');
+            }
           }}
           onTouchMove={(e) => {
-            // Prevent default touch behavior
-            e.preventDefault();
+            // Only allow single-finger touch
+            if (e.touches.length === 1) {
+              e.preventDefault();
+            }
+          }}
+          // Ensure pointer events are captured
+          onPointerDown={(e) => {
+            console.log('Pointer down:', e.pointerType);
+          }}
+          // Prevent default behaviors that might interfere
+          style={{
+            touchAction: 'none',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
           }}
         >
           {Children.map(children, (child, index) => (
