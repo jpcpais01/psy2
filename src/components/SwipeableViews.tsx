@@ -1,129 +1,76 @@
 'use client';
 
 import { motion, PanInfo, useAnimation } from 'framer-motion';
-import { useState, useEffect, Children, useRef, TouchEvent as ReactTouchEvent } from 'react';
+import { useState, useEffect, Children, useRef, useMemo } from 'react';
 
 const PAGE_NAMES = ['Journal', 'Chat', 'Resources'];
 
 export default function SwipeableViews({ children }: { children: React.ReactNode }) {
   const [currentIndex, setCurrentIndex] = useState(1);
-  const [dragStart, setDragStart] = useState(0);
-  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 375);
   const controls = useAnimation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const startYRef = useRef(0);
-  const startXRef = useRef(0);
-  const isDraggingRef = useRef(false);
+  
+  // Memoize children array to prevent unnecessary re-renders
+  const childrenArray = useMemo(() => Children.toArray(children), [children]);
 
+  // Calculate window width safely
+  const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 375;
+
+  const handleDragEnd = (
+    _: MouseEvent | TouchEvent | PointerEvent, 
+    { offset, velocity }: PanInfo
+  ) => {
+    const swipe = offset.x;
+    const swipeVelocity = velocity.x;
+
+    // Determine swipe direction and magnitude
+    const isSwipingLeft = swipe < 0;
+    const isSwipingRight = swipe > 0;
+    const swipeThreshold = windowWidth * 0.2;
+    const velocityThreshold = 300; // pixels per second
+
+    // Decide whether to change page based on swipe distance and velocity
+    const shouldChangePage = 
+      Math.abs(swipe) > swipeThreshold || 
+      Math.abs(swipeVelocity) > velocityThreshold;
+
+    if (shouldChangePage) {
+      if (isSwipingLeft && currentIndex < childrenArray.length - 1) {
+        // Swipe left to next page
+        setCurrentIndex(prev => prev + 1);
+      } else if (isSwipingRight && currentIndex > 0) {
+        // Swipe right to previous page
+        setCurrentIndex(prev => prev - 1);
+      }
+    }
+
+    // Animate back to the current page
+    controls.start({ 
+      x: -currentIndex * 100 + '%',
+      transition: { 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 30 
+      }
+    });
+  };
+
+  // Update page position whenever currentIndex changes
   useEffect(() => {
-    // Ensure this only runs on client side
-    if (typeof window === 'undefined') return;
-
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
-    
-    // Set initial width
-    handleResize();
-    
-    // Add event listener
-    window.addEventListener('resize', handleResize);
-    
-    // Prevent default touch behaviors
-    const preventScroll = (e: TouchEvent) => {
-      if (isDraggingRef.current) {
-        e.preventDefault();
+    controls.start({ 
+      x: -currentIndex * 100 + '%',
+      transition: { 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 30 
       }
-    };
-
-    document.addEventListener('touchmove', preventScroll, { passive: false });
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      document.removeEventListener('touchmove', preventScroll);
-    };
-  }, []);
-
-  const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
-    const touch = e.touches[0];
-    startXRef.current = touch.clientX;
-    startYRef.current = touch.clientY;
-    isDraggingRef.current = false;
-  };
-
-  const handleTouchMove = (e: ReactTouchEvent<HTMLDivElement>) => {
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - startXRef.current;
-    const deltaY = touch.clientY - startYRef.current;
-
-    // Determine if this is a horizontal swipe
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
-      isDraggingRef.current = true;
-      e.preventDefault(); // Prevent default scrolling
-    }
-  };
-
-  const handleTouchEnd = (e: ReactTouchEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current) return;
-
-    const touch = e.changedTouches[0];
-    const deltaX = touch.clientX - startXRef.current;
-    const threshold = windowWidth * 0.15;
-
-    // Use React.Children.toArray for type-safe array conversion
-    const childrenArray = Children.toArray(children);
-    
-    if (childrenArray.length > 0) {
-      if (Math.abs(deltaX) > threshold) {
-        if (deltaX < 0 && currentIndex < childrenArray.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else if (deltaX > 0 && currentIndex > 0) {
-          setCurrentIndex(currentIndex - 1);
-        }
-      }
-    }
-
-    isDraggingRef.current = false;
-    controls.start({ x: -currentIndex * 100 + '%' });
-  };
-
-  const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    setDragStart(info.point.x);
-  };
-
-  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    // Fallback to a default width if window is not available
-    const currentWidth = typeof window !== 'undefined' ? window.innerWidth : 375;
-    const diff = dragStart - info.point.x;
-    const threshold = currentWidth * 0.15;
-
-    // Use React.Children.toArray for type-safe array conversion
-    const childrenArray = Children.toArray(children);
-    
-    if (childrenArray.length > 0) {
-      if (Math.abs(diff) > threshold) {
-        if (diff > 0 && currentIndex < childrenArray.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else if (diff < 0 && currentIndex > 0) {
-          setCurrentIndex(currentIndex - 1);
-        }
-      }
-    }
-    controls.start({ x: -currentIndex * 100 + '%' });
-  };
-
-  useEffect(() => {
-    controls.start({ x: -currentIndex * 100 + '%' });
+    });
   }, [currentIndex, controls]);
 
   return (
     <div 
       ref={containerRef}
       className="fixed inset-0 overflow-hidden bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
       style={{ 
         userSelect: 'none',
         WebkitUserSelect: 'none',
@@ -140,12 +87,11 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
           }}
           drag="x"
           dragConstraints={{ 
-            left: -(Children.count(children) - 1) * windowWidth, 
+            left: -(childrenArray.length - 1) * windowWidth, 
             right: 0 
           }}
           dragElastic={0.1}
           dragMomentum={false}
-          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           animate={controls}
           transition={{ 
