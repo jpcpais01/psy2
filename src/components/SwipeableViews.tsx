@@ -1,17 +1,19 @@
-'use client';
-
 import { motion, PanInfo, useAnimation } from 'framer-motion';
 import { useState, useEffect, Children } from 'react';
+import { useIsClient } from '@/hooks/useIsClient';  
 
 const PAGE_NAMES = ['Journal', 'Chat', 'Resources'];
 
 export default function SwipeableViews({ children }: { children: React.ReactNode }) {
+  const isClient = useIsClient();
   const [currentIndex, setCurrentIndex] = useState(1);
   const [dragStart, setDragStart] = useState(0);
   const [windowWidth, setWindowWidth] = useState(0);
   const controls = useAnimation();
 
   useEffect(() => {
+    if (!isClient) return;
+
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
@@ -24,7 +26,7 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
     
     // Cleanup
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [isClient]);
 
   const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setDragStart(info.point.x);
@@ -32,7 +34,7 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const diff = dragStart - info.point.x;
-    const threshold = windowWidth * 0.15;
+    const threshold = (isClient ? window.innerWidth : 375) * 0.15;
 
     // Use React.Children.toArray for type-safe array conversion
     const childrenArray = Children.toArray(children);
@@ -53,6 +55,10 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
     controls.start({ x: -currentIndex * 100 + '%' });
   }, [currentIndex, controls]);
 
+  if (!isClient) {
+    return null;
+  }
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
       {/* Content */}
@@ -65,7 +71,7 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
           }}
           drag="x"
           dragConstraints={{ 
-            left: -(Children.count(children) - 1) * (windowWidth || window.innerWidth), 
+            left: -(Children.count(children) - 1) * window.innerWidth, 
             right: 0 
           }}
           dragElastic={0.1}
