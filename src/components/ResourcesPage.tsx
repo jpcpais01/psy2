@@ -1,7 +1,5 @@
 'use client';
 
-import { motion } from 'framer-motion';
-
 export default function ResourcesPage() {
   return (
     <div className="w-full h-full flex flex-col px-4 py-6">

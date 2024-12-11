@@ -15,11 +15,11 @@ export default function SwipeableViews({ children }: SwipeableViewsProps) {
   const [dragStart, setDragStart] = useState(0);
   const controls = useAnimation();
 
-  const handleDragStart = (_: any, info: PanInfo) => {
+  const handleDragStart = (event: React.MouseEvent | React.TouchEvent, info: PanInfo) => {
     setDragStart(info.point.x);
   };
 
-  const handleDragEnd = (_: any, info: PanInfo) => {
+  const handleDragEnd = (event: React.MouseEvent | React.TouchEvent, info: PanInfo) => {
     const diff = dragStart - info.point.x;
     const threshold = window.innerWidth * 0.15;
 
