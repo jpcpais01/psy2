@@ -28,20 +28,11 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
 
   const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setDragStart(info.point.x);
-    // Prevent default touch behavior to avoid scrolling/bouncing
-    if (_.type.includes('touch')) {
-      ((_ as TouchEvent).preventDefault());
-    }
   };
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const diff = dragStart - info.point.x;
     const threshold = windowWidth * 0.15;
-
-    // Prevent default touch behavior
-    if (_.type.includes('touch')) {
-      ((_ as TouchEvent).preventDefault());
-    }
 
     // Use React.Children.toArray for type-safe array conversion
     const childrenArray = Children.toArray(children);
@@ -67,7 +58,7 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
       {/* Content */}
       <div className="relative h-full pb-24">
         <motion.div
-          className="flex h-full touch-pan-y"
+          className="flex h-full"
           style={{ x: -currentIndex * 100 + '%' }}
           drag="x"
           dragConstraints={{ left: -((Children.count(children) || 0) - 1) * windowWidth, right: 0 }}
@@ -77,9 +68,14 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
           onDragEnd={handleDragEnd}
           animate={controls}
           transition={{ type: "spring", stiffness: 400, damping: 40 }}
-          touchAction="pan-y"
-          dragDirectionLock
-          dragPropagation={false}
+          onTouchStart={(e) => {
+            // Prevent default touch behavior
+            e.preventDefault();
+          }}
+          onTouchMove={(e) => {
+            // Prevent default touch behavior
+            e.preventDefault();
+          }}
         >
           {Children.map(children, (child, index) => (
             <div
