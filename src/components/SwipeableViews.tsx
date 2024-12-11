@@ -32,17 +32,23 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const diff = dragStart - info.point.x;
-    const threshold = windowWidth * 0.15;
+    const threshold = windowWidth * 0.1; // Reduced from 0.15 to 0.1 for easier swiping
+    const velocity = info.velocity.x; // Add velocity to gesture recognition
 
     // Use React.Children.toArray for type-safe array conversion
     const childrenArray = Children.toArray(children);
     
     if (childrenArray.length > 0) {
-      if (Math.abs(diff) > threshold) {
-        if (diff > 0 && currentIndex < childrenArray.length - 1) {
-          setCurrentIndex(currentIndex + 1);
-        } else if (diff < 0 && currentIndex > 0) {
+      // More forgiving swipe recognition using both distance and velocity
+      if (diff > threshold || (velocity < -500 && currentIndex > 0)) {
+        // Swipe right (go to previous page)
+        if (currentIndex > 0) {
           setCurrentIndex(currentIndex - 1);
+        }
+      } else if (diff < -threshold || (velocity > 500 && currentIndex < childrenArray.length - 1)) {
+        // Swipe left (go to next page)
+        if (currentIndex < childrenArray.length - 1) {
+          setCurrentIndex(currentIndex + 1);
         }
       }
     }
@@ -62,11 +68,11 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
           style={{ x: -currentIndex * 100 + '%' }}
           drag="x"
           dragConstraints={{ left: -((Children.count(children) || 0) - 1) * windowWidth, right: 0 }}
-          dragElastic={0.2}
+          dragElastic={0.5} // Increased from 0.2 to 0.5 for more responsive feel
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           animate={controls}
-          transition={{ type: "spring", stiffness: 400, damping: 40 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }} // Adjusted for smoother animation
         >
           {Children.map(children, (child, index) => (
             <div
