@@ -1,79 +1,160 @@
 'use client';
 
-import { motion, PanInfo, useAnimation } from 'framer-motion';
-import { useState, useEffect, Children } from 'react';
+import React, { 
+  useState, 
+  useEffect, 
+  useCallback, 
+  useMemo, 
+  ReactNode, 
+  Children 
+} from 'react';
+import { 
+  motion, 
+  PanInfo, 
+  useAnimation, 
+  AnimationControls 
+} from 'framer-motion';
 
-const PAGE_NAMES = ['Journal', 'Chat', 'Resources'];
+interface SwipeableViewsProps {
+  children: ReactNode;
+  pageNames?: string[];
+  initialPage?: number;
+  threshold?: number;
+  animationConfig?: {
+    type?: string;
+    stiffness?: number;
+    damping?: number;
+  };
+}
 
-export default function SwipeableViews({ children }: { children: React.ReactNode }) {
-  const [currentIndex, setCurrentIndex] = useState(1);
-  const [dragStart, setDragStart] = useState(0);
+export default function SwipeableViews({
+  children, 
+  pageNames = ['Journal', 'Chat', 'Resources'],
+  initialPage = 1,
+  threshold = 0.15,
+  animationConfig = { 
+    type: "spring", 
+    stiffness: 400, 
+    damping: 40 
+  }
+}: SwipeableViewsProps) {
+  // Ensure initial page is within bounds
+  const [currentIndex, setCurrentIndex] = useState(
+    Math.max(0, Math.min(initialPage, Children.count(children) - 1))
+  );
+  
   const [windowWidth, setWindowWidth] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  
   const controls = useAnimation();
+  const childrenArray = useMemo(() => Children.toArray(children), [children]);
 
+  // Responsive width tracking
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
     
-    // Set initial width
-    handleResize();
-    
-    // Add event listener
+    handleResize(); // Initial call
     window.addEventListener('resize', handleResize);
     
-    // Cleanup
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    setDragStart(info.point.x);
-  };
-
-  const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const diff = dragStart - info.point.x;
-    const threshold = windowWidth * 0.2; // Slightly more lenient threshold
-
-    // Use React.Children.toArray for type-safe array conversion
-    const childrenArray = Children.toArray(children);
+  // Centralized page change logic
+  const changePage = useCallback((newIndex: number) => {
+    const boundedIndex = Math.max(
+      0, 
+      Math.min(newIndex, childrenArray.length - 1)
+    );
     
-    if (childrenArray.length > 0) {
-      if (Math.abs(diff) > threshold) {
-        if (diff > 0 && currentIndex < childrenArray.length - 1) {
-          // Swipe left to next page
-          setCurrentIndex(currentIndex + 1);
-        } else if (diff < 0 && currentIndex > 0) {
-          // Swipe right to previous page
-          setCurrentIndex(currentIndex - 1);
-        }
-      }
-    }
-    controls.start({ x: -currentIndex * 100 + '%' });
-  };
+    setCurrentIndex(boundedIndex);
+    controls.start({ 
+      x: -boundedIndex * 100 + '%',
+      transition: animationConfig
+    });
+  }, [childrenArray, controls, animationConfig]);
 
+  // Drag start handler
+  const handleDragStart = useCallback(
+    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      setIsDragging(true);
+    }, 
+    []
+  );
+
+  // Drag end handler with improved gesture recognition
+  const handleDragEnd = useCallback(
+    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+      setIsDragging(false);
+      
+      const { offset, velocity } = info;
+      const swipeThreshold = windowWidth * threshold;
+      const swipeVelocityThreshold = 500; // px/s
+
+      // Determine direction and magnitude of swipe
+      const isSwipeRight = offset.x > swipeThreshold || 
+        (velocity.x > swipeVelocityThreshold && offset.x > 0);
+      const isSwipeLeft = offset.x < -swipeThreshold || 
+        (velocity.x < -swipeVelocityThreshold && offset.x < 0);
+
+      if (isSwipeRight && currentIndex > 0) {
+        changePage(currentIndex - 1);
+      } else if (isSwipeLeft && currentIndex < childrenArray.length - 1) {
+        changePage(currentIndex + 1);
+      } else {
+        // Snap back to current page
+        changePage(currentIndex);
+      }
+    }, 
+    [currentIndex, windowWidth, threshold, changePage, childrenArray.length]
+  );
+
+  // Keyboard navigation
   useEffect(() => {
-    controls.start({ x: -currentIndex * 100 + '%' });
-  }, [currentIndex, controls]);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          changePage(currentIndex - 1);
+          break;
+        case 'ArrowRight':
+          changePage(currentIndex + 1);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, changePage]);
 
   return (
-    <div className="fixed inset-0 overflow-hidden bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800">
+    <div 
+      className="fixed inset-0 overflow-hidden bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800"
+      aria-live="polite"
+    >
       {/* Content */}
       <div className="relative h-full pb-24">
         <motion.div
           className="flex h-full touch-pan-y"
           style={{ x: -currentIndex * 100 + '%' }}
           drag="x"
-          dragConstraints={{ left: -((Children.count(children) || 0) - 1) * windowWidth, right: 0 }}
-          dragElastic={0.3} // Moderate elasticity
+          dragConstraints={{ 
+            left: -((childrenArray.length || 0) - 1) * windowWidth, 
+            right: 0 
+          }}
+          dragElastic={0.2}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           animate={controls}
-          transition={{ type: "spring", stiffness: 350, damping: 35 }} // Smoother, more natural transition
+          transition={animationConfig}
+          aria-current="page"
         >
-          {Children.map(children, (child, index) => (
+          {childrenArray.map((child, index) => (
             <div
               key={index}
               className="w-screen h-full flex-shrink-0 overflow-hidden"
+              role="tabpanel"
+              aria-hidden={index !== currentIndex}
             >
               {child}
             </div>
@@ -82,16 +163,22 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
       </div>
       
       {/* Page Indicators */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-3 z-50 bg-white/20 dark:bg-black/20 backdrop-blur-md px-4 py-2 rounded-full shadow-lg">
-        {PAGE_NAMES.map((name, index) => (
+      <div 
+        className="fixed bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-3 z-50 bg-white/20 dark:bg-black/20 backdrop-blur-md px-4 py-2 rounded-full shadow-lg"
+        role="tablist"
+      >
+        {pageNames.slice(0, childrenArray.length).map((name, index) => (
           <button
             key={index}
-            onClick={() => setCurrentIndex(index)}
+            onClick={() => changePage(index)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all duration-300 ${
               currentIndex === index
                 ? 'bg-blue-600 text-white'
                 : 'hover:bg-white/10 dark:hover:bg-white/5'
             }`}
+            role="tab"
+            aria-selected={currentIndex === index}
+            aria-controls={`page-${index}`}
           >
             <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
               currentIndex === index
