@@ -1,5 +1,3 @@
-'use client';
-
 import React, { 
   useState, 
   useEffect, 
@@ -10,9 +8,7 @@ import React, {
 } from 'react';
 import { 
   motion, 
-  PanInfo, 
-  useAnimation, 
-  AnimationControls 
+  PanInfo 
 } from 'framer-motion';
 
 interface SwipeableViewsProps {
@@ -44,9 +40,6 @@ export default function SwipeableViews({
   );
   
   const [windowWidth, setWindowWidth] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  
-  const controls = useAnimation();
   const childrenArray = useMemo(() => Children.toArray(children), [children]);
 
   // Responsive width tracking
@@ -69,25 +62,11 @@ export default function SwipeableViews({
     );
     
     setCurrentIndex(boundedIndex);
-    controls.start({ 
-      x: -boundedIndex * 100 + '%',
-      transition: animationConfig
-    });
-  }, [childrenArray, controls, animationConfig]);
-
-  // Drag start handler
-  const handleDragStart = useCallback(
-    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      setIsDragging(true);
-    }, 
-    []
-  );
+  }, [childrenArray]);
 
   // Drag end handler with improved gesture recognition
   const handleDragEnd = useCallback(
-    (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-      setIsDragging(false);
-      
+    (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
       const { offset, velocity } = info;
       const swipeThreshold = windowWidth * threshold;
       const swipeVelocityThreshold = 500; // px/s
@@ -102,9 +81,6 @@ export default function SwipeableViews({
         changePage(currentIndex - 1);
       } else if (isSwipeLeft && currentIndex < childrenArray.length - 1) {
         changePage(currentIndex + 1);
-      } else {
-        // Snap back to current page
-        changePage(currentIndex);
       }
     }, 
     [currentIndex, windowWidth, threshold, changePage, childrenArray.length]
@@ -143,9 +119,7 @@ export default function SwipeableViews({
             right: 0 
           }}
           dragElastic={0.2}
-          onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
-          animate={controls}
           transition={animationConfig}
           aria-current="page"
         >
