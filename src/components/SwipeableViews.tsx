@@ -13,7 +13,23 @@ const PAGE_NAMES = ['Journal', 'Chat', 'Resources'];
 export default function SwipeableViews({ children }: SwipeableViewsProps) {
   const [currentIndex, setCurrentIndex] = useState(1);
   const [dragStart, setDragStart] = useState(0);
+  const [windowWidth, setWindowWidth] = useState(0);
   const controls = useAnimation();
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    // Set initial width
+    handleResize();
+    
+    // Add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setDragStart(info.point.x);
@@ -21,7 +37,7 @@ export default function SwipeableViews({ children }: SwipeableViewsProps) {
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const diff = dragStart - info.point.x;
-    const threshold = window.innerWidth * 0.15;
+    const threshold = windowWidth * 0.15;
 
     if (Math.abs(diff) > threshold) {
       if (diff > 0 && currentIndex < children.length - 1) {
@@ -52,7 +68,7 @@ export default function SwipeableViews({ children }: SwipeableViewsProps) {
           className="flex h-full touch-pan-y"
           style={{ x: -currentIndex * 100 + '%' }}
           drag="x"
-          dragConstraints={{ left: -((children.length - 1) * window.innerWidth), right: 0 }}
+          dragConstraints={{ left: -((children.length - 1) * windowWidth), right: 0 }}
           dragElastic={0.2}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
