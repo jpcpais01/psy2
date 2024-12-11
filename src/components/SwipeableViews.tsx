@@ -28,11 +28,20 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
 
   const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setDragStart(info.point.x);
+    // Prevent default touch behavior to avoid scrolling/bouncing
+    if (_.type.includes('touch')) {
+      ((_ as TouchEvent).preventDefault());
+    }
   };
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const diff = dragStart - info.point.x;
     const threshold = windowWidth * 0.15;
+
+    // Prevent default touch behavior
+    if (_.type.includes('touch')) {
+      ((_ as TouchEvent).preventDefault());
+    }
 
     // Use React.Children.toArray for type-safe array conversion
     const childrenArray = Children.toArray(children);
@@ -63,10 +72,14 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
           drag="x"
           dragConstraints={{ left: -((Children.count(children) || 0) - 1) * windowWidth, right: 0 }}
           dragElastic={0.2}
+          dragMomentum={true}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           animate={controls}
           transition={{ type: "spring", stiffness: 400, damping: 40 }}
+          touchAction="pan-y"
+          dragDirectionLock
+          dragPropagation={false}
         >
           {Children.map(children, (child, index) => (
             <div

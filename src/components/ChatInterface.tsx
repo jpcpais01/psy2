@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Save } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -74,23 +74,6 @@ export default function ChatInterface() {
         content: "I apologize, but I'm experiencing some technical difficulties. Could you please try again?"
       }]);
     }
-  };
-
-  const handleSaveChat = () => {
-    // Save chat messages to journal
-    const chatContent = messages.map(msg => 
-      `${msg.role === 'user' ? 'You: ' : 'AI: '}${msg.content}`
-    ).join('\n\n');
-
-    // Dispatch a custom event to save to journal
-    const saveEvent = new CustomEvent('save-chat-to-journal', {
-      detail: { content: chatContent }
-    });
-    window.dispatchEvent(saveEvent);
-  };
-
-  const handleSaveChatClick = () => {
-    console.log("Save button clicked");
   };
 
   return (
@@ -207,15 +190,6 @@ export default function ChatInterface() {
               >
                 <div className="absolute inset-0 rounded-full bg-neutral-100/50 dark:bg-neutral-900/50 scale-0 group-hover:scale-100 transition-transform duration-200" />
                 <RefreshCw className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
-              </button>
-              <button 
-                type="button"
-                onClick={() => { handleSaveChat(); handleSaveChatClick(); }}
-                className="p-2 rounded-full hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50 transition-colors duration-200 group relative"
-                aria-label="Save Chat"
-              >
-                <div className="absolute inset-0 rounded-full bg-neutral-100/50 dark:bg-neutral-900/50 scale-0 group-hover:scale-100 transition-transform duration-200" />
-                <Save className="w-5 h-5 text-neutral-600 dark:text-neutral-400" />
               </button>
               <input
                 type="text"
