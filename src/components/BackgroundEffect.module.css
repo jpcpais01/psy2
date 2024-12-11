@@ -1,0 +1,37 @@
+@keyframes backgroundBlobAnimation {
+  0%, 100% {
+    transform: translate(0, 0) scale(0.7);
+    opacity: 0.05;
+  }
+  50% {
+    transform: translate(150px, 150px) scale(1.3);
+    opacity: 0.15;
+  }
+}
+
+@keyframes backgroundOpacityAnimation {
+  0%, 100% { opacity: 0.05; }
+  50% { opacity: 0.15; }
+}
+
+.backgroundEffect {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(
+    circle at 30% 50%, 
+    rgba(96, 165, 250, 0.2) 0%, 
+    rgba(192, 132, 252, 0.15) 50%, 
+    transparent 70%
+  );
+  background-size: 400% 400%;
+  filter: blur(60px);
+  animation: 
+    backgroundBlobAnimation 15s ease-in-out infinite,
+    backgroundOpacityAnimation 7s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -50;
+  overflow: hidden;
+}
