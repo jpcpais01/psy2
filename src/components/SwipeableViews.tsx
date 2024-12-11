@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, PanInfo, useAnimation } from 'framer-motion';
-import { useState, useEffect, Children, useRef } from 'react';
+import { useState, useEffect, Children, useRef, TouchEvent as ReactTouchEvent } from 'react';
 
 const PAGE_NAMES = ['Journal', 'Chat', 'Resources'];
 
@@ -11,6 +11,9 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
   const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 375);
   const controls = useAnimation();
   const containerRef = useRef<HTMLDivElement>(null);
+  const startYRef = useRef(0);
+  const startXRef = useRef(0);
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     // Ensure this only runs on client side
@@ -26,9 +29,64 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
     // Add event listener
     window.addEventListener('resize', handleResize);
     
+    // Prevent default touch behaviors
+    const preventScroll = (e: TouchEvent) => {
+      if (isDraggingRef.current) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('touchmove', preventScroll, { passive: false });
+    
     // Cleanup
-    return () => window.removeEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('touchmove', preventScroll);
+    };
   }, []);
+
+  const handleTouchStart = (e: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    startXRef.current = touch.clientX;
+    startYRef.current = touch.clientY;
+    isDraggingRef.current = false;
+  };
+
+  const handleTouchMove = (e: ReactTouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - startXRef.current;
+    const deltaY = touch.clientY - startYRef.current;
+
+    // Determine if this is a horizontal swipe
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+      isDraggingRef.current = true;
+      e.preventDefault(); // Prevent default scrolling
+    }
+  };
+
+  const handleTouchEnd = (e: ReactTouchEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - startXRef.current;
+    const threshold = windowWidth * 0.15;
+
+    // Use React.Children.toArray for type-safe array conversion
+    const childrenArray = Children.toArray(children);
+    
+    if (childrenArray.length > 0) {
+      if (Math.abs(deltaX) > threshold) {
+        if (deltaX < 0 && currentIndex < childrenArray.length - 1) {
+          setCurrentIndex(currentIndex + 1);
+        } else if (deltaX > 0 && currentIndex > 0) {
+          setCurrentIndex(currentIndex - 1);
+        }
+      }
+    }
+
+    isDraggingRef.current = false;
+    controls.start({ x: -currentIndex * 100 + '%' });
+  };
 
   const handleDragStart = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     setDragStart(info.point.x);
@@ -63,6 +121,14 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
     <div 
       ref={containerRef}
       className="fixed inset-0 overflow-hidden bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{ 
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        touchAction: 'none'
+      }}
     >
       {/* Content */}
       <div className="relative h-full pb-24">
@@ -70,7 +136,7 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
           className="flex h-full"
           style={{ 
             x: -currentIndex * 100 + '%',
-            touchAction: 'pan-y pinch-zoom'
+            touchAction: 'none'
           }}
           drag="x"
           dragConstraints={{ 
@@ -93,6 +159,11 @@ export default function SwipeableViews({ children }: { children: React.ReactNode
             <div
               key={index}
               className="w-screen h-full flex-shrink-0 overflow-hidden"
+              style={{ 
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                touchAction: 'none'
+              }}
             >
               {child}
             </div>
